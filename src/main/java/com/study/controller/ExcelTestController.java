@@ -45,20 +45,26 @@ public class ExcelTestController {
 		ExcelFile<ExcelData<?>> singleSheetExcel = new SXSSFSingleSheetExcelFile<>();
 		singleSheetExcel.createSheet("엑셀 싱글 시트")
 						.setHeaderCellStyle(headerStyle)
-						.addMergedRegion(0, 1, 0, 0)
+						.addMergedRegion(0, 2, 0, 0)
 						.addMergedRegion(0, 0, 1, 3)
+						.addMergedRegion(1, 1, 1, 3)
+						.addMergedRegion(3, 3, 0, 3)
 						.setRowHeight(0, 30)
 						.setColumnWidth(2, 3000)
 						.setColumnWidth(3, 4000);
 		
 		//헤더 추가 
 		ExcelData<String> headerData = new ExcelData<>();
-		headerData.addData("No.").addData("정보");
+		headerData.addData("No.","정보");
 		singleSheetExcel.renderRowHeader(headerData);
-		headerData.clearData().addData("이름").addData("연락처").addData("이메일");
+		headerData.clearData().addData("개인정보");
+		singleSheetExcel.renderRowHeader(headerData);
+		headerData.clearData().addData("이름","연락처","이메일");
+		singleSheetExcel.renderRowHeader(headerData);
+		headerData.clearData().addData("아래는 데이터입니다.");
 		singleSheetExcel.renderRowHeader(headerData);
 
-		//셀 데이터 추가 
+		//셀 데이터 추가
 		ExcelData<Object> data = null;
 		singleSheetExcel.setDataCellStyle(dataStyle);
 		for(int i = 0 ; i < 100 ; i++) {
@@ -74,47 +80,47 @@ public class ExcelTestController {
 	@GetMapping("/down2")
 	public void down2(HttpServletRequest request, HttpServletResponse response) throws IOException {
 
-		setFileNameToResponse(request, response, "ExcelModuleTest");
-		
-		//기본 헤더 스타일
-		ExcelCellStyle headerStyle = DefaultExcelCellStyle.GREY;
-
-		//커스텀 스타일
-		ExcelCellStyle dataStyle = new CustomExcelCellStyle();
-		dataStyle.align(ExcelAlignStyle.LEFT_CENTER)
-				.border(ExcelBorderStyle.newInstance(ExcelBorderValues.THIN))
-				.foregroundColor(255, 255, 255)
-				.fontColor(0, 0, 0);
-		
-		int dataCount = 1050000;
-		ExcelFile<Object> multiSheetFile = new SXSSFMultiSheetExcelFile<Object>();
-		int maxSheetCount = multiSheetFile.getMaxSheetCount(2, dataCount);
-				
-		multiSheetFile.createSheet("엑셀 멀티 시트", maxSheetCount)
-						.setHeaderCellStyle(headerStyle)
-						.addMergedRegion(0, 1, 0, 0)
-						.addMergedRegion(0, 0, 1, 3)
-						.setRowHeight(0, 30)
-						.setColumnWidth(2, 3000)
-						.setColumnWidth(3, 4000);;
-		
-		//헤더 추가
-		ExcelData<String> headerData = new ExcelData<>();
-		headerData.addData("No.").addData("정보");
-		multiSheetFile.addRowHeader(headerData);
-		headerData.clearData().addData("이름").addData("연락처").addData("이메일");
-		multiSheetFile.addRowHeader(headerData).renderRowHeader();
-		
-		//데이터 추가
-		ExcelData<Object> data = null;
-		multiSheetFile.setDataCellStyle(dataStyle);
-		for(int i = 0 ; i < dataCount ; i++) {
-			data = new ExcelData<>();
-			data.addData(dataCount-i).addData("이름" +(i+1)).addData("연락처"+(i+1)).addData("이메일"+(i+1));
-			multiSheetFile.renderRowData(data);
-		}
-		
-		multiSheetFile.write(response.getOutputStream());
+//		setFileNameToResponse(request, response, "ExcelModuleTest");
+//
+//		//기본 헤더 스타일
+//		ExcelCellStyle headerStyle = DefaultExcelCellStyle.GREY;
+//
+//		//커스텀 스타일
+//		ExcelCellStyle dataStyle = new CustomExcelCellStyle();
+//		dataStyle.align(ExcelAlignStyle.LEFT_CENTER)
+//				.border(ExcelBorderStyle.newInstance(ExcelBorderValues.THIN))
+//				.foregroundColor(255, 255, 255)
+//				.fontColor(0, 0, 0);
+//
+//		int dataCount = 1050000;
+//		ExcelFile<Object> multiSheetFile = new SXSSFMultiSheetExcelFile<Object>();
+//		int maxSheetCount = multiSheetFile.getMaxSheetCount(2, dataCount);
+//
+//		multiSheetFile.createSheet("엑셀 멀티 시트", maxSheetCount)
+//						.setHeaderCellStyle(headerStyle)
+//						.addMergedRegion(0, 1, 0, 0)
+//						.addMergedRegion(0, 0, 1, 3)
+//						.setRowHeight(0, 30)
+//						.setColumnWidth(2, 3000)
+//						.setColumnWidth(3, 4000);;
+//
+//		//헤더 추가
+//		ExcelData<String> headerData = new ExcelData<>();
+//		headerData.addData("No.").addData("정보");
+//		multiSheetFile.addRowHeader(headerData);
+//		headerData.clearData().addData("이름").addData("연락처").addData("이메일");
+//		multiSheetFile.addRowHeader(headerData).renderRowHeader();
+//
+//		//데이터 추가
+//		ExcelData<Object> data = null;
+//		multiSheetFile.setDataCellStyle(dataStyle);
+//		for(int i = 0 ; i < dataCount ; i++) {
+//			data = new ExcelData<>();
+//			data.addData(dataCount-i).addData("이름" +(i+1)).addData("연락처"+(i+1)).addData("이메일"+(i+1));
+//			multiSheetFile.renderRowData(data);
+//		}
+//
+//		multiSheetFile.write(response.getOutputStream());
 		
 	}
 	

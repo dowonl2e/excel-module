@@ -1,12 +1,8 @@
 package com.study.excel.module;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.study.excel.style.ExcelCellStyle;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xssf.streaming.SXSSFCell;
 import org.apache.poi.xssf.streaming.SXSSFRow;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
@@ -16,12 +12,11 @@ import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
-import com.study.excel.draw.ExcelCellDraw;
-import com.study.excel.style.ExcelCellStyle;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.*;
 
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
-
+@Slf4j
 public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 
 	/* 기본 시트 */
@@ -40,30 +35,31 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/* 스타일 */
 	private XSSFCellStyle headerStyle, dataStyle;
 	private XSSFFont headerFont, dataFont;
-	private Map<Integer, Object> targetHeaderStyleMap = new HashMap<Integer, Object>();
-	private Map<Integer, Object> targetDataStyleMap = new HashMap<Integer, Object>();
+	private Map<Integer, Object> targetHeaderStyleMap = new HashMap<>();
+	private Map<Integer, Object> targetDataStyleMap = new HashMap<>();
 
-	private Map<Integer, Object> rowStyleMap = new HashMap<Integer, Object>();
+	private Map<Integer, Object> rowStyleMap = new HashMap<>();
 
-	/* 행/열 인덱스 */
-	private int rowIndex = 0;
-	private int colIndex = 0;
-	private int flushNum = 1;
-	private int maxColIndex = 0;
+	/* 행/열/메모리Flush/시트 최대 행 인덱스 초기화 */
+	private int rowIndex = 0, colIndex = 0, flushNum = 1, maxColIndex = 0;
 
 	/* 셀 합병 인덱스 */
-	private List<Integer> startRowIndexes = new ArrayList<Integer>();
-	private List<Integer> endRowIndexes = new ArrayList<Integer>();
-	private List<Integer> startColIndexes = new ArrayList<Integer>();
-	private List<Integer> endColIndexes = new ArrayList<Integer>();
+	private List<Integer> startRowIndexes = new ArrayList<>();
+	private List<Integer> endRowIndexes = new ArrayList<>();
+	private List<Integer> startColIndexes = new ArrayList<>();
+	private List<Integer> endColIndexes = new ArrayList<>();
 
-	private Map<Integer, Float> rowHeightMap = new HashMap<Integer, Float>();
-	private Map<Integer, Integer> columnWidthMap = new HashMap<Integer, Integer>();
+	private Map<Integer, Float> rowHeightMap = new HashMap<>();
+	private Map<Integer, Integer> columnWidthMap = new HashMap<>();
 
 	private List<List<T>> cellDataList = new ArrayList<>();
 
 	protected SXSSFExcelFile() {
 		this.workbook = new SXSSFWorkbook();
+		initStyles();
+	}
+
+	private void initStyles(){
 		this.headerStyle = (XSSFCellStyle) workbook.createCellStyle();
 		this.headerFont = (XSSFFont) workbook.createFont();
 		this.dataStyle = (XSSFCellStyle) workbook.createCellStyle();
@@ -73,7 +69,7 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 행에 데이터 출력
 	 * 
-	 * @param List<T> data
+	 * @param data
 	 */
 	protected void renderSXSSFRowData(List<? extends Object> data) {
 		if (isFullSheet())
@@ -84,7 +80,7 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 			colIndex = 0;
 			SXSSFCell cell = null;
 			for (Object obj : data) {
-				cell = row.getCell(colIndex) == null ? (SXSSFCell) row.createCell(colIndex) : (SXSSFCell) row.getCell(colIndex);
+				cell = ObjectUtils.isEmpty(row.getCell(colIndex)) ? (SXSSFCell) row.createCell(colIndex) : (SXSSFCell) row.getCell(colIndex);
 				cell.setCellStyle(getDataCellStyle(rowIndex, colIndex));
 				renderCellValue(cell, (obj == null ? "" : obj));
 				colIndex++;
@@ -96,15 +92,12 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 
 	/**
 	 * 엑셀 시트 생성 (시트명 값이 Null 또는 빈값("")의 경우 기본 시트명(Sheet)으로 설정됨)
-	 * 
-	 * @param String sheetName
+	 * @param sheetName
 	 */
 	protected void createSXXSFSheet(String sheetName) {
-		sheetName = ObjectUtils.isEmpty(sheetName) ? "" : sheetName;
-		sheetName = sheetName.equals("") ? SIMPLE_SHEETNAME : sheetName;
+		sheetName = ObjectUtils.isEmpty(sheetName) ? SIMPLE_SHEETNAME : sheetName;
 		if (workbook.getSheetIndex(sheetName) > -1)
 			sheetName += (getSheetCount() + 1);
-
 		this.sheet = (SXSSFSheet) workbook.createSheet(sheetName);
 	}
 
@@ -121,58 +114,75 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 헤더 데이터 추가 (스타일과 셀 합병 설정 후에 호출)
 	 * 
-	 * @param List<T> headers
+	 * @param headers
 	 */
 	protected void renderSXSSFRowHeader(List<? extends Object> headers) {
-		if (headers != null && headers.size() > 0) {
+		if (!CollectionUtils.isEmpty(headers)) {
 			SXSSFRow row = (SXSSFRow) sheet.createRow(rowIndex);
 			row.setHeightInPoints(rowHeightMap.get(rowIndex) == null ? DEFAULT_ROW_HEIGHT : rowHeightMap.get(rowIndex));
 
 			colIndex = 0;
-			for (Object obj : headers) {
+			/**
+			 * O O O O
+			 * O O O O
+			 * O O X X
+			 * O O O O
+			 */
+			Queue<? extends Object> headerQueue = new LinkedList<>(headers);
+			while (!headerQueue.isEmpty()) {
 				int cellStartRowIndex = rowIndex;
+				int cellEndRowIndex = rowIndex;
 				int cellStartColIndex = colIndex;
 				int cellEndColIndex = colIndex;
 				boolean isMergeResion = false;
 
 				// 행/열 인덱스가 합병 영역에 포함되는지 체크
 				for (int idx = 0; idx < startRowIndexes.size(); idx++) {
-					int tempStartRowIdx = startRowIndexes.get(idx);
-					int tempEndRowIdx = endRowIndexes.get(idx);
-					int tempStartColIdx = startColIndexes.get(idx);
-					int tempEndColIdx = endColIndexes.get(idx);
-					if (rowIndex >= tempStartRowIdx && rowIndex <= tempEndRowIdx && colIndex >= tempStartColIdx
-							&& colIndex <= tempEndColIdx) {
-						cellStartRowIndex = tempStartRowIdx;
-						cellStartColIndex = tempStartColIdx;
-						cellEndColIndex = tempEndColIdx;
+					int mergeStartRowIdx = startRowIndexes.get(idx);
+					int mergeEndRowIdx = endRowIndexes.get(idx);
+					int mergeStartColIdx = startColIndexes.get(idx);
+					int mergeEndColIdx = endColIndexes.get(idx);
+					if (rowIndex >= mergeStartRowIdx && rowIndex <= mergeEndRowIdx
+							&& colIndex >= mergeStartColIdx && colIndex <= mergeEndColIdx) {
+						cellStartRowIndex = mergeStartRowIdx;
+						cellEndRowIndex = mergeEndRowIdx;
+						cellStartColIndex = mergeStartColIdx;
+						cellEndColIndex = mergeEndColIdx;
 						isMergeResion = true;
-						break;
 					}
 				}
-
+				/*
+				 2,  0 으로 들어옴
+				0,2,0,0
+				0,0,1,3
+				1,2,1,1
+				1,1,2,3
+				3,3,0,3
+				 */
+				log.info("체크1 : " + rowIndex + ", " + colIndex + " => " + isMergeResion);
+				log.info("체크2 : " + cellStartRowIndex + " ~ " + cellEndRowIndex);
+				log.info("체크3 : " + cellStartColIndex + " ~ " + cellEndColIndex);
 				// 행/열 인덱스가 합병 영역에 포함되는 경우
-				if (isMergeResion == true) {
+				if (isMergeResion) {
 					// 행/열 인덱스가 합병영역의 시작 위치인 경우 데이터 추가 후 다음열부터 합병 영역의 마지막 열까지 빈 셀 추가
 					if (rowIndex == cellStartRowIndex && colIndex == cellStartColIndex) {
-						createCell(row, rowIndex, colIndex++, (obj == null ? "" : obj));
+						createCell(row, rowIndex, colIndex, headerQueue.poll());
 						createEmptyCell(row, rowIndex, colIndex, cellEndColIndex);
 					}
-					// 행/열 인덱스가 합병영역의 시작 위치가 아닌 경우 현재 행에서 합병영역의 마지막 열까지 빈 셀 추가 후 다음 셀에 데이터 추가
+					// 행/열 인덱스가 합병영역의 시작 위치가 아닌 경우 현재 행에서 합병영역의 마지막 열까지 빈 셀만 추가
 					else {
 						createEmptyCell(row, rowIndex, colIndex, cellEndColIndex);
-						createCell(row, rowIndex, colIndex++, (obj == null ? "" : obj));
 					}
 				}
-				// 행/열 인덱스가 합병 영역에 포함되는 경우 단순히 데이터 추가
+				// 행/열 인덱스가 합병 영역에 포함되지 않는 경우
 				else {
-					createCell(row, rowIndex, colIndex++, (obj == null ? "" : obj));
+					createCell(row, rowIndex, colIndex, headerQueue.poll());
 				}
 			}
 
 			/*
-			 * 현재 행에 셀 추가가 끝난 후 현재 열 인덱스가 다른 행의 열 인덱스보다 적은 경우 최대 열위치만큼 빈 셀 추가 (마지막 열이 합병으로
-			 * 끝나는 경우에 빈셀을 추가하기 위함)
+			 * 현재 행에 셀 추가가 끝난 후 현재 열 인덱스가 다른 행의 열 인덱스보다 적은 경우 최대 열위치만큼 빈 셀 추가
+			 * (마지막 열이 합병으로 끝나는 경우에 빈셀을 추가하기 위함)
 			 */
 			maxColIndex = maxColIndex < colIndex ? colIndex : maxColIndex;
 
@@ -185,8 +195,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 특정 행/열에 저장된 헤더 스타일 반환
 	 * 
-	 * @param int rowIndex
-	 * @param int columnIndex
+	 * @param rowIndex
+	 * @param columnIndex
 	 * @return XSSFCellStyle
 	 */
 	@SuppressWarnings("unchecked")
@@ -207,8 +217,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 특정 행/열에 저장된 데이터 스타일 반환
 	 * 
-	 * @param int rowIndex
-	 * @param int columnIndex
+	 * @param rowIndex
+	 * @param columnIndex
 	 * @return XSSFCellStyle
 	 */
 	@SuppressWarnings("unchecked")
@@ -229,8 +239,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 셀 데이터 출력
 	 * 
-	 * @param SXSSFCell cell
-	 * @param Object    cellValue
+	 * @param cell
+	 * @param cellValue
 	 */
 	private void renderCellValue(SXSSFCell cell, Object cellValue) {
 		if (cellValue instanceof Number) {
@@ -244,38 +254,38 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 셀 생성 및 스타일, 값 설정
 	 * 
-	 * @param SXSSFRow row
-	 * @param int      rowIndex
-	 * @param int      columnIndex
-	 * @param Object   cellValue
+	 * @param row
+	 * @param rowIndex
+	 * @param columnIndex
+	 * @param cellValue
 	 */
 	private void createCell(SXSSFRow row, int rowIndex, int columnIndex, Object cellValue) {
 
 		int columnWidth = (columnWidthMap.get(columnIndex) == null ? 0 : (Integer) columnWidthMap.get(columnIndex));
 		if (columnWidth > 0)
 			sheet.setColumnWidth(columnIndex, columnWidth);
-
-		SXSSFCell cell = row.getCell(columnIndex) == null ? (SXSSFCell) row.createCell(columnIndex)
-				: (SXSSFCell) row.getCell(columnIndex);
+		log.info("셀 생성 : " +  rowIndex + ", " + columnIndex + ", " + cellValue);
+		SXSSFCell cell = ObjectUtils.isEmpty(row.getCell(columnIndex))
+				? (SXSSFCell) row.createCell(columnIndex) : (SXSSFCell) row.getCell(columnIndex);
 		cell.setCellStyle(getHeaderCellStyle(rowIndex, columnIndex));
 		if (cellValue != null) {
 			renderCellValue(cell, (cellValue == null ? "" : cellValue));
 		}
+		this.colIndex++;
 	}
 
 	/**
 	 * 셀 합병에 필요한 빈 셀 생성
 	 * 
-	 * @param SXSSFRow row
-	 * @param int      startColumnIndex
-	 * @param int      endColumnIndex
-	 * @param boolean  isMergedColumn
+	 * @param row
+	 * @param rowIndex
+	 * @param startColumnIndex
+	 * @param endColumnIndex
 	 */
 	private void createEmptyCell(SXSSFRow row, int rowIndex, int startColumnIndex, int endColumnIndex) {
 		int idx = startColumnIndex;
 		while (idx <= endColumnIndex) {
 			createCell(row, rowIndex, idx++, null);
-			colIndex++;
 		}
 	}
 
@@ -308,7 +318,7 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 지정한 열의 헤더 스타일 적용
 	 * 
-	 * @param int      columnIndex
+	 * @param columnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -327,8 +337,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 지정한 행/열의 헤더 스타일 적용
 	 * 
-	 * @param int      rowIndex
-	 * @param int      columnIndex
+	 * @param rowIndex
+	 * @param columnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -359,8 +369,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 지정한 열 범위 헤더 스타일 적용
 	 * 
-	 * @param int      startColumnIndex
-	 * @param int      endColumnIndex
+	 * @param startColumnIndex
+	 * @param endColumnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -385,9 +395,9 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 지정한 행의 열 범위 헤더 스타일 적용
 	 * 
-	 * @param int      rowIndex
-	 * @param int      startColumnIndex
-	 * @param int      endColumnIndex
+	 * @param rowIndex
+	 * @param startColumnIndex
+	 * @param endColumnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -435,7 +445,7 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 지정한 열의 데이터 스타일 적용
 	 * 
-	 * @param int      columnIndex
+	 * @param columnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -452,18 +462,19 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 셀을 합병 인덱스 저장 (시작행, 마지막행, 시작열, 마지막열)
 	 * 
-	 * @param int startRowIndex
-	 * @param int endRowIndex
-	 * @param int startColumnIndex
-	 * @param int endColumnIndex
+	 * @param startRowIndex
+	 * @param endRowIndex
+	 * @param startColumnIndex
+	 * @param endColumnIndex
 	 * @return ExcelFile
 	 */
-	protected void addMergedRegionIndexes(int startRowIndex, int endRowIndex, int startColumnIndex,
-			int endColumnIndex) {
+	protected void addMergedRegionIndexes(int startRowIndex, int endRowIndex, int startColumnIndex, int endColumnIndex) {
 		startRowIndexes.add(startRowIndex);
 		endRowIndexes.add(endRowIndex);
 		startColIndexes.add(startColumnIndex);
 		endColIndexes.add(endColumnIndex);
+
+
 	}
 
 	/**
@@ -493,7 +504,7 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 행 인덱스 변경
 	 * 
-	 * @param int rowIndex
+	 * @param rowIndex
 	 */
 	protected void setRowIndex(int rowIndex) {
 		this.rowIndex = rowIndex;
@@ -510,8 +521,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 
 	/**
 	 * 시트에 행 추가여부 확인
-	 * 
-	 * @return 추가 불가능하면 true, 추가 가능하면 false
+	 * 추가 불가능하면 true, 추가 가능하면 false
+	 * @return boolean
 	 */
 	public boolean isFullSheet() {
 		return this.rowIndex > excelVersion.getLastRowIndex();
@@ -527,7 +538,7 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 시트 변경
 	 * 
-	 * @param int sheetIndex
+	 * @param sheetIndex
 	 */
 	protected void setSXSSFSheetAt(int sheetIndex) {
 		if (sheetIndex > getSheetCount())
@@ -540,8 +551,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 최대 생성 시트 개수
 	 * 
-	 * @param int headerRowCount
-	 * @param int totalDataRowCount
+	 * @param headerRowCount
+	 * @param totalDataRowCount
 	 * @return int
 	 */
 	@Override
@@ -564,8 +575,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 행 높이 설정
 	 * 
-	 * @param int   rowIndex
-	 * @param float height
+	 * @param rowIndex
+	 * @param height
 	 * @return ExcelFile
 	 */
 	@Override
@@ -577,8 +588,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 열 넓이 설정
 	 * 
-	 * @param int columnIndex
-	 * @param int width
+	 * @param columnIndex
+	 * @param width
 	 * @return ExcelFile
 	 */
 	@Override
@@ -590,7 +601,7 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	/**
 	 * 엑셀 출력
 	 * 
-	 * @param OutputStream stream
+	 * @param stream
 	 * @throws IOException
 	 */
 	@Override

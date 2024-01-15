@@ -1,14 +1,12 @@
 package com.study.excel.module;
 
+import com.study.excel.style.ExcelCellStyle;
+import lombok.NonNull;
+import org.apache.poi.ss.SpreadsheetVersion;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
-
-import org.apache.poi.ss.SpreadsheetVersion;
-
-import com.study.excel.style.ExcelCellStyle;
-
-import lombok.NonNull;
 
 public interface ExcelFile<T> {
 
@@ -17,7 +15,7 @@ public interface ExcelFile<T> {
 	/**
 	 * 시트 생성
 	 * 
-	 * @param String sheetName
+	 * @param sheetName
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> createSheet(String sheetName);
@@ -25,8 +23,8 @@ public interface ExcelFile<T> {
 	/**
 	 * 시트 N개 생성
 	 * 
-	 * @param String sheetName
-	 * @param int    sheetCount
+	 * @param sheetName
+	 * @param    sheetCount
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> createSheet(String sheetName, int sheetCount);
@@ -41,10 +39,10 @@ public interface ExcelFile<T> {
 	/**
 	 * 셀 합병 영역 설정
 	 * 
-	 * @param int startRowIndex
-	 * @param int endRowIndex
-	 * @param int startColumnIndex
-	 * @param int endColumnIndex
+	 * @param startRowIndex
+	 * @param endRowIndex
+	 * @param startColumnIndex
+	 * @param endColumnIndex
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> addMergedRegion(int startRowIndex, int endRowIndex, int startColumnIndex, int endColumnIndex);
@@ -52,8 +50,8 @@ public interface ExcelFile<T> {
 	/**
 	 * 셀 너비 설정
 	 * 
-	 * @param int columnIndex
-	 * @param int width
+	 * @param columnIndex
+	 * @param width
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> setColumnWidth(int columnIndex, int width);
@@ -61,8 +59,8 @@ public interface ExcelFile<T> {
 	/**
 	 * 행 높이 설정
 	 * 
-	 * @param int   rowIndex
-	 * @param float height
+	 * @param rowIndex
+	 * @param height
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> setRowHeight(int rowIndex, float height);
@@ -78,7 +76,7 @@ public interface ExcelFile<T> {
 	/**
 	 * 지정한 열의 헤더 스타일 적용
 	 * 
-	 * @param int      columnIndex
+	 * @param      columnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -87,8 +85,8 @@ public interface ExcelFile<T> {
 	/**
 	 * 지정한 행/열의 헤더 스타일 적용
 	 * 
-	 * @param int      rowIndex
-	 * @param int      columnIndex
+	 * @param      rowIndex
+	 * @param      columnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -97,8 +95,8 @@ public interface ExcelFile<T> {
 	/**
 	 * 지정한 열 범위 헤더 스타일 적용
 	 * 
-	 * @param int      startColumnIndex
-	 * @param int      endColumnIndex
+	 * @param      startColumnIndex
+	 * @param      endColumnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -107,9 +105,9 @@ public interface ExcelFile<T> {
 	/**
 	 * 지정한 행의 열 범위 헤더 스타일 적용
 	 * 
-	 * @param int      rowIndex
-	 * @param int      startColumnIndex
-	 * @param int      endColumnIndex
+	 * @param      rowIndex
+	 * @param      startColumnIndex
+	 * @param      endColumnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -126,7 +124,7 @@ public interface ExcelFile<T> {
 	/**
 	 * 지정한 열의 데이터 스타일 적용
 	 * 
-	 * @param int      columnIndex
+	 * @param      columnIndex
 	 * @param @NonNull ExcelCellStyle style
 	 * @return ExcelFile
 	 */
@@ -135,7 +133,7 @@ public interface ExcelFile<T> {
 	/**
 	 * 헤더 출력
 	 * 
-	 * @param List<T> headers
+	 * @param headers
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> addRowHeader(List<? extends Object> headers);
@@ -143,7 +141,7 @@ public interface ExcelFile<T> {
 	/**
 	 * 헤더 출력
 	 * 
-	 * @param List<T> headers
+	 * @param headers
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> addRowHeader(T headers);
@@ -156,7 +154,7 @@ public interface ExcelFile<T> {
 	/**
 	 * 헤더 출력
 	 * 
-	 * @param List<T> headers
+	 * @param headers
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> renderRowHeader(List<? extends Object> headers);
@@ -164,7 +162,7 @@ public interface ExcelFile<T> {
 	/**
 	 * 헤더 출력
 	 * 
-	 * @param List<T> headers
+	 * @param headers
 	 * @return ExcelFile
 	 */
 	ExcelFile<T> renderRowHeader(T headers);
@@ -172,14 +170,14 @@ public interface ExcelFile<T> {
 	/**
 	 * 행에 셀 데이터 출력
 	 * 
-	 * @param List<T> data
+	 * @param data
 	 */
 	void renderRowData(List<? extends Object> data);
 
 	/**
 	 * 행에 셀 데이터 출력
 	 * 
-	 * @param List<T> data
+	 * @param data
 	 */
 	void renderRowData(T data);
 
@@ -206,8 +204,9 @@ public interface ExcelFile<T> {
 
 	/**
 	 * 최대 생성 시트 개수
-	 * 
-	 * @param totalCount
+	 *
+	 * @param headerRowCount
+	 * @param totalDataRowCount
 	 * @return int
 	 */
 	int getMaxSheetCount(int headerRowCount, int totalDataRowCount);
@@ -215,7 +214,7 @@ public interface ExcelFile<T> {
 	/**
 	 * 엑셀 파일 출력
 	 * 
-	 * @param OutputStream stream
+	 * @param stream
 	 * @throws IOException
 	 */
 	void write(OutputStream stream) throws IOException;

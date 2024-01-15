@@ -17,7 +17,7 @@ public class SXSSFSingleSheetExcelFile<T> extends SXSSFExcelFile<T> {
 	/**
 	 * 시트 생성
 	 * 
-	 * @param String sheetName
+	 * @param sheetName
 	 * @return ExcelFile
 	 */
 	@Override
@@ -29,8 +29,8 @@ public class SXSSFSingleSheetExcelFile<T> extends SXSSFExcelFile<T> {
 	/**
 	 * 시트 1개 생성 고정
 	 * 
-	 * @param String sheetName
-	 * @param int    sheetCount
+	 * @param sheetName
+	 * @param sheetCount
 	 * @return ExcelFile
 	 */
 	@Override
@@ -41,10 +41,10 @@ public class SXSSFSingleSheetExcelFile<T> extends SXSSFExcelFile<T> {
 	/**
 	 * 셀을 합병 인덱스 저장 (시작행, 마지막행, 시작열, 마지막열)
 	 * 
-	 * @param int startRowIndex
-	 * @param int endRowIndex
-	 * @param int startColumnIndex
-	 * @param int endColumnIndex
+	 * @param startRowIndex
+	 * @param endRowIndex
+	 * @param startColIndex
+	 * @param endColIndex
 	 * @return ExcelFile
 	 */
 	@Override
@@ -62,7 +62,7 @@ public class SXSSFSingleSheetExcelFile<T> extends SXSSFExcelFile<T> {
 	/**
 	 * 헤더 데이터 추가
 	 * 
-	 * @param List<T> headers
+	 * @param headers
 	 * @return ExcelFile
 	 */
 	@Override
@@ -95,7 +95,7 @@ public class SXSSFSingleSheetExcelFile<T> extends SXSSFExcelFile<T> {
 	/**
 	 * 행에 셀 데이터 출력
 	 * 
-	 * @param List<T> data
+	 * @param data
 	 */
 	@Override
 	public void renderRowData(List<? extends Object> data) {
@@ -105,9 +105,8 @@ public class SXSSFSingleSheetExcelFile<T> extends SXSSFExcelFile<T> {
 	@Override
 	public void renderRowData(T data) {
 		if (data instanceof ExcelData) {
-			ExcelData<?> datavo = (ExcelData<?>) data;
-			if (datavo != null)
-				renderRowData(datavo.getDataList());
+			if (data != null)
+				renderRowData(((ExcelData<?>) data).getDataList());
 		}
 	}
 
