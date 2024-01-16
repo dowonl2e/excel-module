@@ -129,11 +129,8 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 			 * O O O O
 			 */
 			Queue<? extends Object> headerQueue = new LinkedList<>(headers);
+			int cellStartRowIndex = rowIndex, cellStartColIndex = colIndex, cellEndColIndex = colIndex;
 			while (!headerQueue.isEmpty()) {
-				int cellStartRowIndex = rowIndex;
-				int cellEndRowIndex = rowIndex;
-				int cellStartColIndex = colIndex;
-				int cellEndColIndex = colIndex;
 				boolean isMergeResion = false;
 
 				// 행/열 인덱스가 합병 영역에 포함되는지 체크
@@ -142,34 +139,29 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 					int mergeEndRowIdx = endRowIndexes.get(idx);
 					int mergeStartColIdx = startColIndexes.get(idx);
 					int mergeEndColIdx = endColIndexes.get(idx);
+					/*
+						추가하려는 셀 행/열이 설정된 합병영역에 시작 행/열 시작 인덱스 체크
+					 */
 					if (rowIndex >= mergeStartRowIdx && rowIndex <= mergeEndRowIdx
-							&& colIndex >= mergeStartColIdx && colIndex <= mergeEndColIdx) {
+							&& colIndex >= mergeStartColIdx && colIndex <= mergeStartColIdx) {
 						cellStartRowIndex = mergeStartRowIdx;
-						cellEndRowIndex = mergeEndRowIdx;
 						cellStartColIndex = mergeStartColIdx;
 						cellEndColIndex = mergeEndColIdx;
 						isMergeResion = true;
+						break;
 					}
 				}
+
 				/*
-				 2,  0 으로 들어옴
-				0,2,0,0
-				0,0,1,3
-				1,2,1,1
-				1,1,2,3
-				3,3,0,3
+				  행/열 인덱스가 합병 영역에 포함되는 경우
+				  1. 행/열 인덱스가 합병영역의 시작 위치인 경우 데이터 추가 후 다음열부터 합병 영역의 마지막 열까지 빈 셀 추가
+				  2. 행/열 인덱스가 합병영역의 시작 위치가 아닌 경우 현재 행에서 합병영역의 마지막 열까지 빈 셀만 추가
 				 */
-				log.info("체크1 : " + rowIndex + ", " + colIndex + " => " + isMergeResion);
-				log.info("체크2 : " + cellStartRowIndex + " ~ " + cellEndRowIndex);
-				log.info("체크3 : " + cellStartColIndex + " ~ " + cellEndColIndex);
-				// 행/열 인덱스가 합병 영역에 포함되는 경우
 				if (isMergeResion) {
-					// 행/열 인덱스가 합병영역의 시작 위치인 경우 데이터 추가 후 다음열부터 합병 영역의 마지막 열까지 빈 셀 추가
 					if (rowIndex == cellStartRowIndex && colIndex == cellStartColIndex) {
 						createCell(row, rowIndex, colIndex, headerQueue.poll());
 						createEmptyCell(row, rowIndex, colIndex, cellEndColIndex);
 					}
-					// 행/열 인덱스가 합병영역의 시작 위치가 아닌 경우 현재 행에서 합병영역의 마지막 열까지 빈 셀만 추가
 					else {
 						createEmptyCell(row, rowIndex, colIndex, cellEndColIndex);
 					}
@@ -264,9 +256,10 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 		int columnWidth = (columnWidthMap.get(columnIndex) == null ? 0 : (Integer) columnWidthMap.get(columnIndex));
 		if (columnWidth > 0)
 			sheet.setColumnWidth(columnIndex, columnWidth);
-		log.info("셀 생성 : " +  rowIndex + ", " + columnIndex + ", " + cellValue);
+
 		SXSSFCell cell = ObjectUtils.isEmpty(row.getCell(columnIndex))
 				? (SXSSFCell) row.createCell(columnIndex) : (SXSSFCell) row.getCell(columnIndex);
+
 		cell.setCellStyle(getHeaderCellStyle(rowIndex, columnIndex));
 		if (cellValue != null) {
 			renderCellValue(cell, (cellValue == null ? "" : cellValue));
