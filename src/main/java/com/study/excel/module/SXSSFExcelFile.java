@@ -102,16 +102,6 @@ public abstract class SXSSFExcelFile<T> implements ExcelFile<T> {
 	}
 
 	/**
-	 * 커멘트 그리기 설정
-	 * 
-	 * @param @NonNull ExcelCellDraw draw
-	 */
-	/*
-	 * @Override public void setCommentDraw(@NonNull ExcelCellDraw draw){
-	 * draw.applyComment(null); }
-	 */
-
-	/**
 	 * 헤더 데이터 추가 (스타일과 셀 합병 설정 후에 호출)
 	 * 
 	 * @param headers

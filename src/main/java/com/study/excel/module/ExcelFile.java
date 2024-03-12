@@ -30,13 +30,6 @@ public interface ExcelFile<T> {
 	ExcelFile<T> createSheet(String sheetName, int sheetCount);
 
 	/**
-	 * 커멘트 그리기
-	 * 
-	 * @param @NonNull ExcelCellDraw draw
-	 */
-	// void setCommentDraw(@NonNull ExcelCellDraw draw);
-
-	/**
 	 * 셀 합병 영역 설정
 	 * 
 	 * @param startRowIndex
